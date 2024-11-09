@@ -1509,20 +1509,20 @@ class T2Api(object):
         _py_t2sdk_api.T2Api_swiginit(self, _py_t2sdk_api.new_T2Api())
     __swig_destroy__ = _py_t2sdk_api.delete_T2Api
 
-    def init(self):
-        return _py_t2sdk_api.T2Api_init(self)
+    def init(self, *args):
+        return _py_t2sdk_api.T2Api_init(self, *args)
 
     def release(self):
         return _py_t2sdk_api.T2Api_release(self)
 
-    def connect(self):
-        return _py_t2sdk_api.T2Api_connect(self)
+    def connect(self, *args):
+        return _py_t2sdk_api.T2Api_connect(self, *args)
 
     def send(self, req):
         return _py_t2sdk_api.T2Api_send(self, req)
 
-    def recv(self):
-        return _py_t2sdk_api.T2Api_recv(self)
+    def recv(self, *args):
+        return _py_t2sdk_api.T2Api_recv(self, *args)
 
     def setUtf8(self, flag):
         return _py_t2sdk_api.T2Api_setUtf8(self, flag)

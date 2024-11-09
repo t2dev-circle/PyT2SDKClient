@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import sys
 import yaml
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget,QComboBox,QLabel,QLineEdit,QPushButton,QTableWidget,QTableWidgetItem,QMessageBox,QHBoxLayout, QVBoxLayout, QGridLayout
@@ -12,7 +13,7 @@ from py_t2sdk_api import *
 py_t2sdk_api包的调用方式：
 
 api = T2Api()
-api.init()
+api.init("121.41.126.194:9359")
 api.connect()
 
 req = StringMap()
@@ -50,7 +51,8 @@ class MainWindow(QMainWindow):
         self.init = True
 
     def load_yaml(self, file_name='t2_api.yaml'):
-        with open(file_name, "r", encoding="utf-8") as f:
+        path = os.path.join(os.path.split(__file__)[0], file_name)
+        with open(path, "r", encoding="utf-8") as f:
             self.apis = yaml.full_load(f)
             #print(self.apis)
 
@@ -78,6 +80,18 @@ class MainWindow(QMainWindow):
         self.layout_base.addWidget(self.widget_output)
 
         self.layout_choose = QHBoxLayout()
+        self.layout_choose.setContentsMargins(16, 0, 16, 0)
+        self.lbl_addr = QLabel("柜台地址：")
+        self.lbl_addr.setFixedWidth(64)
+        self.edt_addr = QLineEdit()
+        self.edt_addr.setFixedWidth(156)
+        self.edt_addr.setFixedHeight(28)
+        self.edt_addr.setText("121.41.126.194:9359")
+        self.edt_addr.textChanged.connect(self.on_addr_changed)
+        self.addr_blank = QWidget()
+        self.addr_blank.setFixedWidth(32)
+        self.lbl_apis = QLabel("柜台功能：")
+        self.lbl_apis.setFixedWidth(64)
         self.combox_apis = QComboBox()
         self.combox_apis.setFixedWidth(256)
         self.combox_apis.setFixedHeight(28)
@@ -86,6 +100,10 @@ class MainWindow(QMainWindow):
         self.btn_run = QPushButton("测试")
         self.btn_run.setFixedWidth(80)
         self.btn_run.setFixedHeight(28)
+        self.layout_choose.addWidget(self.lbl_addr)
+        self.layout_choose.addWidget(self.edt_addr)
+        self.layout_choose.addWidget(self.addr_blank)
+        self.layout_choose.addWidget(self.lbl_apis)
         self.layout_choose.addWidget(self.combox_apis)
         self.layout_choose.addWidget(self.widget_blank)
         self.layout_choose.addWidget(self.btn_run)
@@ -98,6 +116,7 @@ class MainWindow(QMainWindow):
 
     def init_data(self):
         self.init = False
+        self.addr_changed = False
         self.max_input_fields = 30
         self.apis = None
         self.cur_api = None
@@ -105,7 +124,7 @@ class MainWindow(QMainWindow):
         self.input_field_info = {}
 
         self.t2api = T2Api()
-        self.t2api.init()
+        self.t2api.init("121.41.126.194:9359")
 
     def init_choose(self):
         if self.apis is None:
@@ -191,6 +210,8 @@ class MainWindow(QMainWindow):
         self.tbl_output = QTableWidget()
         layout_output.addWidget(self.tbl_output)
 
+        self.combox_apis.setFocus()
+
     def update_output(self):
         records = self.t2api.getRecords()
         if len(records) == 0:
@@ -262,6 +283,10 @@ class MainWindow(QMainWindow):
 
         return self.t2req
     
+    def on_addr_changed(self, text):
+        print(text)
+        self.addr_changed = True
+    
     def select_api(self):
         self.cur_api = self.get_api()
         
@@ -271,6 +296,12 @@ class MainWindow(QMainWindow):
         self.reset_input()
 
     def run_api(self):
+        if self.addr_changed:
+            addr = self.edt_addr.text()
+            #柜台地址发生变化，需要释放上一个连接并重新初始化
+            self.t2api.release()
+            self.t2api.init(addr)
+            
         if not self.t2api.connect():
             msg = self.t2api.getErrMsg()
             print(msg)
@@ -303,7 +334,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     window = MainWindow()
-    window.setWindowTitle("T2SDK客户端 V1.0")
+    window.setWindowTitle("T2SDK客户端 V1.1.0")
     window.setWindowIcon(qta.icon("mdi.api", color="#304ffe"))
     window.resize(1024, 768)
     window.show()
