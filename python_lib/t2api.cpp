@@ -88,17 +88,25 @@ T2Api::~T2Api()
     release();
 }
 
-bool T2Api::init()
+bool T2Api::init(const string &addr)
 {
+    if (addr.empty())
+    {
+        m_errMsg = "·şÎñÆ÷µØÖ·Îª¿Õ";
+
+        return false;
+    }
+
     m_config = NewConfig();
     if (m_config == nullptr)
     {
+        m_errMsg = "³õÊ¼»¯ÅäÖÃÊ§°Ü";
+
         return false;
     }
 
     m_config->AddRef();
-    m_config->SetString("t2sdk", "servers", "121.41.126.194:9359");
-    m_config->SetString("t2sdk", "license_file", "license.dat");
+    m_config->SetString("t2sdk", "servers", addr.c_str());
     m_config->SetString("t2sdk", "license_file", "license.dat");
     m_config->SetString("t2sdk", "if_sendRecv_log", "1");
     m_config->SetString("t2sdk", "if_error_log", "1");
@@ -123,7 +131,7 @@ void T2Api::release()
 
     if (m_recvMsg != nullptr)
     {
-        m_recvMsg->Release();
+        //m_recvMsg->Release();
         m_recvMsg = nullptr;
     }
 
@@ -151,17 +159,26 @@ void T2Api::setUtf8(bool flag)
     m_utf8 = flag;
 }
 
-bool T2Api::connect()
+bool T2Api::connect(unsigned int timeout)
 {
     m_errMsg = "";
     
     if (m_config == nullptr)
     {
+        m_errMsg = "ÅäÖÃÎŞĞ§";
+
         return false;
     }
 
     if (m_conn != nullptr)
     {
+        int status = m_conn->GetStatus();
+
+        if (status & CConnectionInterface::Registered)
+        {
+            return true;
+        }
+
         m_conn->Release();
         m_conn = nullptr;
     }
@@ -169,6 +186,8 @@ bool T2Api::connect()
     m_conn = NewConnection(m_config);
     if (m_conn == nullptr)
     {
+        m_errMsg = "³õÊ¼»¯Á¬½ÓÊ§°Ü";
+
         return false;
     }
 
@@ -177,11 +196,13 @@ bool T2Api::connect()
     int ret = m_conn->Create2BizMsg(nullptr);
     if (ret != 0)
     {
+        m_errMsg = "³õÊ¼»¯ÒµÎñÊ§°Ü";
+
         return false;
     }
 
-    // è¶…æ—¶å•ä½æ¯«ç§’
-    ret = m_conn->Connect(1000 * 5);
+    // ³¬Ê±µ¥Î»ºÁÃë
+    ret = m_conn->Connect(timeout);
     if (ret != 0)
     {
         m_errMsg = m_conn->GetErrorMsg(ret);
@@ -205,6 +226,8 @@ bool T2Api::send(const map<string, string> &req)
     m_sendMsg = NewBizMessage();
     if (m_sendMsg == nullptr)
     {
+        m_errMsg = "³õÊ¼»¯ÒµÎñÏûÏ¢Ê§°Ü";
+
         return false;
     }
 
@@ -214,8 +237,8 @@ bool T2Api::send(const map<string, string> &req)
 
     string funcNo = tmp["func_no"];
     m_sendMsg->SetFunction(atoi(funcNo.c_str()));
-	m_sendMsg->SetPacketType(REQUEST_PACKET);
-    m_sendMsg->SetSystemNo(2); // 2-æ™®é€š 3-ä¿¡ç”¨ 5-ä¸ªè‚¡æœŸæƒ
+    m_sendMsg->SetPacketType(REQUEST_PACKET);
+    m_sendMsg->SetSystemNo(2); // 2-ÆÕÍ¨ 3-ĞÅÓÃ 5-¸ö¹ÉÆÚÈ¨
 
     packRequest(req);
 
@@ -233,14 +256,18 @@ bool T2Api::send(const map<string, string> &req)
     return true;
 }
 
-bool T2Api::recv()
+bool T2Api::recv(unsigned int timeout)
 {
     if (m_conn == nullptr)
     {
+        m_errMsg = "Á¬½ÓÎŞĞ§";
+
         return false;
     }
 
-    int ret = m_conn->RecvBizMsg(m_sendHandle, &m_recvMsg, 1000 * 5);
+    m_recvMsg = nullptr;
+    
+    int ret = m_conn->RecvBizMsg(m_sendHandle, &m_recvMsg, timeout);
     if (ret != 0)
     {
         m_errMsg = m_conn->GetErrorMsg(ret);
@@ -250,6 +277,8 @@ bool T2Api::recv()
 
     if (m_recvMsg == nullptr)
     {
+        m_errMsg = "½ÓÊÕµ½µÄÏûÏ¢ÎŞĞ§";
+
         return false;
     }
 
@@ -283,6 +312,8 @@ bool T2Api::packRequest(const map<string, string> &req)
 {
     if (req.size() == 0)
     {
+        m_errMsg = "ÇëÇóÈë²ÎÎª¿Õ";
+
         return false;
     }
 
@@ -294,12 +325,19 @@ bool T2Api::packRequest(const map<string, string> &req)
     }
 
     m_packer = NewPacker(2);
+    if (m_packer == nullptr)
+    {
+        m_errMsg = "³õÊ¼»¯´ò°üÆ÷Ê§°Ü";
+        
+        return false;
+    }
+
     m_packer->AddRef();
     m_packer->BeginPack();
 
     for (auto iter = req.begin(); iter != req.end(); ++iter)
     {
-        m_packer->AddField(iter->first.c_str(), 'S', iter->second.length());
+        m_packer->AddField(iter->first.c_str(), 'S', (int)iter->second.length());
     }
 
     for (auto iter = req.begin(); iter != req.end(); ++iter)
@@ -318,6 +356,8 @@ bool T2Api::packResponse(vector<map<string, string>> &rsp)
 
     if (m_recvMsg == nullptr)
     {
+        m_errMsg = "½ÓÊÕµ½µÄÏûÏ¢ÎŞĞ§";
+
         return false;
     }
 
@@ -333,6 +373,8 @@ bool T2Api::packResponse(vector<map<string, string>> &rsp)
     m_unpacker = NewUnPacker((void *)buff, len);
     if (m_unpacker == nullptr)
     {
+        m_errMsg = "³õÊ¼»¯½â°üÆ÷Ê§°Ü";
+
         return false;
     }
 
@@ -355,12 +397,12 @@ bool T2Api::packResponse(vector<map<string, string>> &rsp)
     int rowCount = m_unpacker->GetRowCount();
     int colCount = m_unpacker->GetColCount();
 
-    cout << "pack:" << len << "|" << rowCount << "|" << colCount << endl;
-
-    map<string, string> record;
+    //cout << "pack:" << len << "|" << rowCount << "|" << colCount << endl;
 
     for (auto i = 0; i < rowCount; i++)
     {
+        map<string, string> record;
+
         for (auto j = 0; j < colCount; j++)
         {
             string colName = m_unpacker->GetColName(j);
@@ -388,7 +430,7 @@ bool T2Api::packResponse(vector<map<string, string>> &rsp)
                 break;
             }
 
-            cout << i << "|" << j << "|" << colName << "|" << colType << "|" << colValue << endl;
+            //cout << i << "|" << j << "|" << colName << "|" << colType << "|" << colValue << endl;
 
             if (m_utf8)
             {
