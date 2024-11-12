@@ -3,7 +3,7 @@
 
 #define MyAppName "PyT2SDKClient"
 #define MySetupName "PyT2SDKClient"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.1.1"
 #define MyAppPublisher "t2dev-circle"
 #define MyAppExeName "PyT2SDKClient.exe"
 

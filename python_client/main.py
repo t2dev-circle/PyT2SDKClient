@@ -334,7 +334,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     window = MainWindow()
-    window.setWindowTitle("T2SDK客户端 V1.1.0")
+    window.setWindowTitle("T2SDK客户端 V1.1.1")
     window.setWindowIcon(qta.icon("mdi.api", color="#304ffe"))
     window.resize(1024, 768)
     window.show()
